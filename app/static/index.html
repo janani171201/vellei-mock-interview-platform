@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Vellei Mock Interview</title>
+<style>
+body{font-family:Arial;max-width:900px;margin:30px auto;padding:0 15px}
+textarea{width:100%;min-height:150px}
+button{padding:10px 16px;margin:5px;cursor:pointer}
+.card{border:1px solid #ddd;border-radius:8px;padding:18px;margin:12px 0}
+#question{font-size:20px;font-weight:bold}
+pre{white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>Vellei AI Mock Interview</h1>
+<div class="card">
+<button onclick="createSession()">1. Create Interview</button>
+<button onclick="startInterview()">2. Start</button>
+<span id="status"></span>
+</div>
+<div class="card">
+<div id="question">Create and start an interview.</div>
+<p id="competency"></p>
+<textarea id="answer" placeholder="Type your answer here..."></textarea>
+<button onclick="submitAnswer()">Submit Answer</button>
+<button onclick="completeInterview()">Complete Interview</button>
+</div>
+<div class="card"><h2>Result</h2><pre id="result"></pre></div>
+<script>
+let interviewId=null, questionId=null;
+async function createSession(){
+const body={candidate:{candidate_id:"CAND-DEMO-001",skills:["Python","FastAPI","SQL","Machine Learning"],experience:[{role:"Data Analyst Intern",duration:"6 months"}],projects:[{name:"AI Candidate Platform",technologies:["Python","FastAPI"]}],target_role:"Python Developer"},job:{job_id:"JOB-PY-001",title:"Python Developer",description:"Build backend APIs and data services using Python. Experience with FastAPI, SQL and debugging is valuable.",required_skills:["Python","FastAPI","SQL"],competencies:["Python","FastAPI","SQL"]},mode:"text",interview_type:"technical",question_count:6,difficulty:"adaptive"};
+const r=await fetch("/api/v1/mock-interviews",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+const d=await r.json(); interviewId=d.interview_id; document.getElementById("status").textContent=interviewId;
+}
+async function startInterview(){
+if(!interviewId)return alert("Create the interview first.");
+const r=await fetch(`/api/v1/mock-interviews/${interviewId}/start`,{method:"POST"});const d=await r.json();showQuestion(d.question);
+}
+function showQuestion(q){if(!q)return;questionId=q.question_id;document.getElementById("question").textContent=q.text;document.getElementById("competency").textContent=`Competency: ${q.competency} | Difficulty: ${q.difficulty}`;document.getElementById("answer").value="";}
+async function submitAnswer(){
+if(!interviewId||!questionId)return;
+const answer=document.getElementById("answer").value;
+const r=await fetch(`/api/v1/mock-interviews/${interviewId}/answers`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question_id:questionId,answer})});
+const d=await r.json();document.getElementById("result").textContent=JSON.stringify(d.evaluation||d,null,2);
+if(d.next_question)showQuestion(d.next_question);else if(d.action==="complete")document.getElementById("question").textContent=d.message;
+}
+async function completeInterview(){
+if(!interviewId)return;
+const r=await fetch(`/api/v1/mock-interviews/${interviewId}/complete`,{method:"POST"});const d=await r.json();
+document.getElementById("result").textContent=JSON.stringify(d,null,2);document.getElementById("question").textContent="Interview completed. Report ready.";
+}
+</script>
+</body>
+</html>
